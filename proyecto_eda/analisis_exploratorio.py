@@ -141,8 +141,8 @@ def diagnostico_calidad(df, columnas_entidad=None, rangos_plausibles=None, ruta_
     logging.info(f"Tablas de diagnóstico exportadas correctamente en '{ruta_salida_tablas}/'.")
     return reporte_nulos, resumen_diagnostico
 
-#3. Limpieza y preparacion de datos
 
+#3. Limpieza y preparacion de datos
 def limpiar_y_preparar_datos(df, ruta_salida_tablas=DIR_TABLAS):
     """
     limpia y prepara el dataset a partir del diagnostico de calidad.
@@ -389,6 +389,174 @@ def limpiar_y_preparar_datos(df, ruta_salida_tablas=DIR_TABLAS):
 
     return df_limpio
 
+# 4. ESTADÍSTICA DESCRIPTIVA
+def estadistica_descriptiva(df, ruta_salida_tablas=DIR_TABLAS):
+    """
+    Calcula estadísticas descriptivas de las variables numéricas,
+    separando los resultados según el tipo de métrica.
+    """
+
+    logging.info("Iniciando estadística descriptiva...")
+
+    # Crear la carpeta de resultados si no existe.
+    ruta_salida_tablas = Path(ruta_salida_tablas)
+    ruta_salida_tablas.mkdir(parents=True, exist_ok=True)
+
+    # 4.1 Estadísticas descriptivas de la variable value
+    resumen_numerico = (
+        df.groupby("metric")["value"]
+        .agg(
+            cantidad_validos="count",
+            media="mean",
+            mediana="median",
+            desviacion_estandar="std",
+            minimo="min",
+            maximo="max",
+            q1=lambda x: x.quantile(0.25),
+            q3=lambda x: x.quantile(0.75)
+        )
+        .reset_index()
+    )
+
+    # Redondear resultados para facilitar su lectura.
+    columnas_numericas = resumen_numerico.select_dtypes(
+        include="number"
+    ).columns.difference(["cantidad_validos"])
+
+    resumen_numerico[columnas_numericas] = (
+        resumen_numerico[columnas_numericas].round(2)
+    )
+
+    # Mostrar resultados en terminal.
+    print("\n" + "=" * 70)
+    print(" ESTADÍSTICAS DESCRIPTIVAS POR MÉTRICA ")
+    print("=" * 70)
+    print(resumen_numerico.to_string(index=False))
+
+    # Exportar resultados.
+    resumen_numerico.to_csv(
+        ruta_salida_tablas / "estadisticas_numericas.csv",
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    logging.info("Estadísticas numéricas exportadas correctamente.")
+
+    
+    # 4.2 Frecuencias y porcentajes de variables categóricas
+    # Seleccionar las columnas categóricas relevantes
+    columnas_categoricas = [
+        "state",
+        "scope",
+        "crime_category",
+        "metric",
+        "source"
+    ]
+
+    # Lista para almacenar las tablas de frecuencias
+    tablas_frecuencias = []
+
+    for columna in columnas_categoricas:
+
+        # Contar cuántas veces aparece cada categoría
+        frecuencias = (
+            df[columna]
+            .value_counts(dropna=False)   #cuenta la cantidad de aparicion por categoria y dropna=False para incluir valores faltantes
+            .rename_axis("categoria")
+            .reset_index(name="frecuencia")
+        )
+
+        # Calcular el porcentaje de cada categoría
+        frecuencias["porcentaje"] = (
+            frecuencias["frecuencia"] / len(df) * 100   #calculo de porcentaje que una categoria representa del total de registros
+        ).round(2)
+
+        # Identificar la columna analizada
+        frecuencias.insert(0, "variable", columna)
+
+        # Almacenar los resultados
+        tablas_frecuencias.append(frecuencias)
+
+        logging.info(
+            f"Frecuencias calculadas para: {columna}"
+        )
+
+    # Unificar las tablas de frecuencias
+    resumen_categorico = pd.concat(
+        tablas_frecuencias,
+        ignore_index=True
+    )
+
+    # Exportar las frecuencias y porcentajes
+    resumen_categorico.to_csv(
+        ruta_salida_tablas / "frecuencias_categoricas.csv",
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    logging.info(
+        "Frecuencias categóricas exportadas correctamente."
+    )
+
+    
+    # 4.3 Comparación estadística entre estados
+    # Seleccionar registros comparables
+    df_comparacion = df[
+        (df["metric"] == "cases_registered") &
+        (df["source"] == "state_table") &
+        (df["scope"] == "ipc")
+    ].copy()
+
+    # Calcular estadísticas agrupadas por estado
+    comparacion_estados = (
+        df_comparacion
+        .groupby("state")["value"]
+        .agg(
+            cantidad_registros="count",
+            media="mean",
+            mediana="median",
+            minimo="min",
+            maximo="max"
+        )
+        .reset_index()
+    )
+
+    # Ordenar los estados según su mediana
+    comparacion_estados = comparacion_estados.sort_values(
+        by="mediana",
+        ascending=False
+    )
+
+    # Redondear los resultados
+    columnas_redondear = [
+        "media", "mediana", "minimo", "maximo"
+    ]
+
+    comparacion_estados[columnas_redondear] = (
+        comparacion_estados[columnas_redondear].round(2)
+    )
+
+    # Mostrar los primeros 10 estados
+    print("\n" + "=" * 70)
+    print(" COMPARACIÓN ESTADÍSTICA ENTRE ESTADOS ")
+    print("=" * 70)
+    print(comparacion_estados.head(10).to_string(index=False))
+
+    # Exportar la comparación completa
+    comparacion_estados.to_csv(
+        ruta_salida_tablas / "comparacion_estados.csv",
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    logging.info(
+        "Comparación estadística entre estados exportada."
+    )
+
+
+    return resumen_numerico
+
+
 
 # -----------------------------------------------------------------------------
 # BLOQUE PRINCIPAL
@@ -417,6 +585,12 @@ if __name__ == "__main__":
         logging.info(
             f"Dataset procesado: {df_limpio.shape[0]:,} filas"
             f"y {df_limpio.shape[1]} columnas."
+        )
+
+        #4. Estadistica descriptiva
+        resumen_estadistico = estadistica_descriptiva(
+            df=df_limpio,
+            ruta_salida_tablas=DIR_TABLAS
         )
 
     except Exception as error:

@@ -1,2 +1,5 @@
+# Dataset original sin comprimir
+proyecto_eda/datos/crime_state_year.csv
+
 datos/*.csv
 __pycache__/

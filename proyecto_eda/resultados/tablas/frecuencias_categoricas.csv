@@ -1,0 +1,79 @@
+﻿variable,categoria,frecuencia,porcentaje
+state,Jammu and Kashmir,19323,2.89
+state,Rajasthan,19323,2.89
+state,Uttar Pradesh,19322,2.89
+state,Assam,19322,2.89
+state,Maharashtra,19322,2.89
+state,Jharkhand,19322,2.89
+state,Sikkim,19321,2.89
+state,Himachal Pradesh,19321,2.89
+state,Odisha,19321,2.89
+state,Kerala,19321,2.89
+state,Karnataka,19321,2.89
+state,Madhya Pradesh,19321,2.89
+state,Manipur,19321,2.89
+state,Tamil Nadu,19321,2.89
+state,Tripura,19321,2.89
+state,Uttarakhand,19321,2.89
+state,Goa,19320,2.89
+state,West Bengal,19320,2.89
+state,Mizoram,19319,2.89
+state,Bihar,19299,2.89
+state,Chhattisgarh,19298,2.89
+state,Andaman and Nicobar Islands,19243,2.88
+state,Nagaland,19234,2.88
+state,Puducherry,19232,2.88
+state,Lakshadweep,19231,2.88
+state,Punjab,19230,2.88
+state,Haryana,19228,2.88
+state,Arunachal Pradesh,19228,2.88
+state,Chandigarh,19226,2.88
+state,Meghalaya,19218,2.88
+state,Gujarat,19098,2.86
+state,Andhra Pradesh,18934,2.83
+state,Delhi,18905,2.83
+state,Dadra and Nagar Haveli and Daman and Diu,17341,2.6
+state,Telangana,11195,1.68
+state,Ladakh,3997,0.6
+scope,ipc,146025,21.85
+scope,sll,124959,18.7
+scope,scheduled_castes,90447,13.54
+scope,scheduled_tribes,87254,13.06
+scope,children,65024,9.73
+scope,women,59212,8.86
+scope,juveniles,47003,7.03
+scope,cyber,38387,5.74
+scope,senior_citizens,9929,1.49
+crime_category,sexual_offence,80973,12.12
+crime_category,crime_against_sc_st,60222,9.01
+crime_category,other,59298,8.87
+crime_category,trafficking,46292,6.93
+crime_category,gambling_other_sll,45174,6.76
+crime_category,kidnapping,40653,6.08
+crime_category,murder,40521,6.06
+crime_category,robbery_dacoity,35277,5.28
+crime_category,cyber,32224,4.82
+crime_category,hurt_assault,31459,4.71
+crime_category,riot_unrest,30186,4.52
+crime_category,narcotics,26544,3.97
+crime_category,fraud_economic,25099,3.76
+crime_category,arms_explosives,18455,2.76
+crime_category,child_specific_offence,16911,2.53
+crime_category,all_crimes,14594,2.18
+crime_category,dowry,13482,2.02
+crime_category,theft_burglary,12954,1.94
+crime_category,environment_wildlife,9978,1.49
+crime_category,domestic_violence,9554,1.43
+crime_category,road_accident,8920,1.33
+crime_category,suicide,6557,0.98
+crime_category,property_damage,2528,0.38
+crime_category,corruption,385,0.06
+metric,cases_registered,319593,47.83
+metric,persons_arrested,89705,13.42
+metric,victims,68333,10.23
+metric,persons_convicted,48319,7.23
+metric,cases_chargesheeted,48251,7.22
+metric,persons_chargesheeted,48251,7.22
+metric,cases_convicted,45788,6.85
+source,state_table,564488,84.47
+source,district_total,103752,15.53
