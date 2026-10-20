@@ -1,0 +1,2 @@
+Registros_Iniciales,Registros_Finales,Columnas_Iniciales,Columnas_Finales,Justificacion
+668240,668240,12,9,"Se removieron columnas de metadatos administrativos (table_id, file, source). Registros mantenidos al 100%."
