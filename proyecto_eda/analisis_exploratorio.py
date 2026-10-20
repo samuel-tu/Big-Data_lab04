@@ -3,6 +3,7 @@ import sys
 import logging
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 # Configuración de registro de eventos (logging)
 logging.basicConfig(
@@ -140,6 +141,254 @@ def diagnostico_calidad(df, columnas_entidad=None, rangos_plausibles=None, ruta_
     logging.info(f"Tablas de diagnóstico exportadas correctamente en '{ruta_salida_tablas}/'.")
     return reporte_nulos, resumen_diagnostico
 
+#3. Limpieza y preparacion de datos
+
+def limpiar_y_preparar_datos(df, ruta_salida_tablas=DIR_TABLAS):
+    """
+    limpia y prepara el dataset a partir del diagnostico de calidad.
+    parametros:
+        - df: Dataframe original
+        - ruta_salida_tabla: carpeta para guardar el registro de limpieza
+    retorna:
+        df_limpio: Dataframe procesado
+    """
+    ruta_salida_tablas = Path(ruta_salida_tablas)
+    ruta_salida_tablas.mkdir(parents=True, exist_ok=True)
+    logging.info("Iniciando limpieza y preparacion de datos...")
+    #hacemos una copia para no modificar los datos originales
+    df_limpio=df.copy()
+    #registrar las transformaciones realizadas
+    registro_limpieza=[]
+    #cantidad inicial de registros
+    filas_iniciales=len(df_limpio)
+    
+    logging.info(f"registros iniciales: {filas_iniciales:,}")
+
+    #3.1 Tratamiento de valores faltantes
+    filas_antes=len(df_limpio)
+    #identificacion de cantidad de valores nulos por columna
+    valores_nulos=df_limpio.isnull().sum()
+    for columna, cantidad in valores_nulos.items():
+        if cantidad > 0:
+            logging.warning(
+                f"columna '{columna}':{cantidad} valores faltantes."
+            )
+            #table_id es un identificador documental opcional
+            if columna=="table_id":
+                decision="conservar valores nulos: identificador opcional"
+            else:
+                decision="conservar temporalmente para revision"
+
+            registro_limpieza.append({
+                "transformacion": f"revision de nulos en {columna}",
+                "decision": decision,
+                "filas_antes":filas_antes,
+                "filas_despues":len(df_limpio)
+            })
+
+    logging.info("Revision de valores faltantes finalizada")
+
+    #3.2 Tratamiento de duplicados exactos
+    filas_antes=len(df_limpio)
+    duplicados_exactos=df_limpio.duplicated().sum()
+
+    if duplicados_exactos > 0:
+        logging.warning(
+            f"Se encontraron {duplicados_exactos} duplicados exactos"
+        )
+        df_limpio = df_limpio.drop_duplicates().copy()
+        decision="Eliminar filas completamente identicas."
+    else:
+        logging.info("No se encontraron duplicados exactos")
+        decision="conservar registros: no existen duplicados exactos"
+
+    registro_limpieza.append({
+        "transformacion": "revision de duplicados exactos",
+        "decision": decision,
+        "filas_antes":filas_antes,
+        "filas_despues":len(df_limpio)
+    })
+
+    #3.3 Validacion de tipos
+    filas_antes=len(df_limpio)
+
+    for columna in ["year", "value"]:
+        #conversion a numerico, los valores invalidos pasan a NaN
+        valores_convertidos=pd.to_numeric(
+            df_limpio[columna], errors="coerce" #detecta valores que no se pueden convertir a numeros
+        )
+
+        conversiones_invalidas=(
+            df_limpio[columna].notna() &
+            valores_convertidos.isna()
+        ).sum()
+
+        if conversiones_invalidas==0:
+            df_limpio[columna]=valores_convertidos
+            decision="Conversion numerica validad"
+        else:
+            decision=(
+                f"Se detectaron {conversiones_invalidas} valores "
+                "no convertibles. Se conservo la columna original."
+            )
+            logging.warning(decision)
+
+        registro_limpieza.append({
+            "transformacion": f"Validacion del tipo de {columna}",
+            "decision": decision,
+            "filas_antes":filas_antes,
+            "filas_despues":len(df_limpio)
+        })
+
+    #Verificacion detipo de columna booleana
+    if pd.api.types.is_bool_dtype(df_limpio["disputed"]):
+        logging.info("Lacolumna disputed tiene tipo booleano valido")
+    else:
+        logging.warning(
+            "La columna disputed requiere revision de tipo"
+        )
+
+    #3.4 Validacion de Rangos Plausibles
+    filas_antes=len(df_limpio)
+
+    anios_invalidos=(
+        df_limpio["year"].notna() & 
+        ~df_limpio["year"].between(2001,2022)
+    ).sum()
+
+    valores_negativos=(df_limpio["value"]<0).sum()
+
+    logging.info(f"Años fuera del periodo: {anios_invalidos}")
+    logging.info(f"Valores negativos: {valores_negativos}")
+
+    #Se conservan registros sospechosos/poco claros, no se modifican ni se eliminan
+    registro_limpieza.append({
+        "transformacion": "Validacion de rangos.",
+        "decision": (
+            f"{anios_invalidos} años fuera de periodos y "
+            f"{valores_negativos} valores negativos. "
+            "Los registros sospechosos se conservan para revision."
+        ),
+        "filas_antes":filas_antes,
+        "filas_despues":len(df_limpio)
+    })
+
+    #3.5 Deteccion de valores extremos
+    filas_antes=len(df_limpio)
+
+    for metrica, grupo in df_limpio.groupby("metric"):
+        q1 = grupo["value"].quantile(0.25)
+        q3 = grupo["value"].quantile(0.75)
+        iqr = q3 - q1
+        limite_inferior = q1 - (1.5 * iqr)
+        limite_superior = q3 + (1.5 * iqr)
+        
+        extremos = grupo[
+            (grupo["value"] < limite_inferior) |
+            (grupo["value"] > limite_superior)
+        ]
+
+        cantidad_extremos=len(extremos)
+        logging.info(
+            f"Metrica {metrica}: "
+            f"{cantidad_extremos} valores potencialmente atipicos"
+        )
+
+        registro_limpieza.append({
+            "transformacion": f"Revision de extremos: {metrica}",
+            "decision": (
+                f"{cantidad_extremos} valores fuera del IQR. "
+                "Se conservan por no existir evidencia suficiente "
+                "para clasificarlos como errore.s"
+            ),
+            "filas_antes":filas_antes,
+            "filas_despues":len(df_limpio)
+        })
+
+    #3.6 Revision de Valores decimales
+    filas_antes=len(df_limpio)
+    #identificacion de valores numericos no enteros
+    mascara_decimales=(
+        df_limpio["value"].notna() & 
+        (df_limpio["value"] % 1 != 0)
+    )
+    #Obtener solo los regist5ros con valores decimales
+    registro_decimales = df_limpio.loc[mascara_decimales].copy()
+    cantidad_decimales = len(registro_decimales)
+    logging.info(
+        f"Se encontraron {cantidad_decimales} valores decimales"
+    )
+    #Resumir los decimales segun la metrica
+    if cantidad_decimales > 0:
+        resumen_decimales = (
+            registro_decimales.groupby("metric").size().reset_index(name="cantidad")
+        )
+
+        logging.info(
+            f"Distribucion de decimales:\n"
+            f"{resumen_decimales.to_string(index=False)}"
+        )
+
+        #Guardar los registros para revision posterior
+        registro_decimales.to_csv(
+            ruta_salida_tablas / "revision_decimales.csv",
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+        logging.info(
+            "Archivo revision_decimales.csv generado correctamente"
+        )
+    else:
+        logging.info(
+            "No se encontraron valores decimales"
+        )
+
+    #registro de la decision de limpieza
+    registro_limpieza.append({
+        "transformacion": "Revision de valores decimales",
+        "decision": (
+            f"{cantidad_decimales} valores decimales detectados. "
+            "Se conservan sin redondear porque no existe "
+            "evidencia suficiente para clasificarlos como errores."
+        ),
+        "filas_antes":filas_antes,
+        "filas_despues":len(df_limpio)
+    })
+
+    #3.7 Exportacion del registro de limpieza
+    #Convertir la lista de transformaciones en un DAtaFrame
+    df_registro = pd.DataFrame(registro_limpieza)
+
+    #Calcular cuantas filas  fueron eliminadas en cada etapa
+    df_registro["filas_eliminadas"] = (
+        df_registro["filas_antes"] - 
+        df_registro["filas_despues"]
+    )
+
+    #Definir la ruta del archivo de salida
+    ruta_registro= ruta_salida_tablas / "registro_limpieza_detallado.csv"
+
+    #Exportar el registro a un archivo CSV
+    df_registro.to_csv(
+        ruta_registro,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    logging.info(
+        f"Registro de limpieza guardado en: {ruta_registro}"
+    )
+
+    #Informar del resultado final de la limpieza
+    logging.info(
+        f"Limpieza finalizada."
+        f"Registros iniciales: {filas_iniciales:,} |"
+        f"Registros finales: {len(df_limpio):,}"
+    )
+
+    return df_limpio
+
 
 # -----------------------------------------------------------------------------
 # BLOQUE PRINCIPAL
@@ -158,6 +407,16 @@ if __name__ == "__main__":
             df=df_crimenes,
             columnas_entidad=None,
             rangos_plausibles=None
+        )
+
+        # 3. Limpieza y preparacion de datos
+        df_limpio = limpiar_y_preparar_datos(
+            df=df_crimenes,
+            ruta_salida_tablas=DIR_TABLAS
+        )
+        logging.info(
+            f"Dataset procesado: {df_limpio.shape[0]:,} filas"
+            f"y {df_limpio.shape[1]} columnas."
         )
 
     except Exception as error:

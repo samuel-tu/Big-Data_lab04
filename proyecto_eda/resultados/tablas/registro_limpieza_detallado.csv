@@ -1,0 +1,14 @@
+﻿transformacion,decision,filas_antes,filas_despues,filas_eliminadas
+revision de nulos en table_id,conservar valores nulos: identificador opcional,668240,668240,0
+revision de duplicados exactos,conservar registros: no existen duplicados exactos,668240,668240,0
+Validacion del tipo de year,Conversion numerica validad,668240,668240,0
+Validacion del tipo de value,Conversion numerica validad,668240,668240,0
+Validacion de rangos.,0 años fuera de periodos y 0 valores negativos. Los registros sospechosos se conservan para revision.,668240,668240,0
+Revision de extremos: cases_chargesheeted,9418 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: cases_convicted,8927 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: cases_registered,61909 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: persons_arrested,17338 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: persons_chargesheeted,9494 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: persons_convicted,9497 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de extremos: victims,12928 valores fuera del IQR. Se conservan por no existir evidencia suficiente para clasificarlos como errore.s,668240,668240,0
+Revision de valores decimales,141 valores decimales detectados. Se conservan sin redondear porque no existe evidencia suficiente para clasificarlos como errores.,668240,668240,0
