@@ -1,0 +1,3 @@
+﻿variables,metodo,coeficiente,pares
+cases_registered vs persons_arrested,pearson,0.9755,408
+cases_registered vs persons_arrested,spearman,0.9862,408

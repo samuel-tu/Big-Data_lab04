@@ -556,7 +556,91 @@ def estadistica_descriptiva(df, ruta_salida_tablas=DIR_TABLAS):
 
     return resumen_numerico
 
+# 5. RELACIONES ENTRE VARIABLES
+def relaciones_entre_variables(df, ruta_salida_tablas=DIR_TABLAS):
+    """
+    Explora la relacion entre casos registrados y personas detenidas,
+    y compara la proporcion de condenas entre familias de delitos.
+    """
+    ruta_salida_tablas = Path(ruta_salida_tablas)
+    ruta_salida_tablas.mkdir(parents=True, exist_ok=True)
+    logging.info("Iniciando analisis de relaciones entre variables...")
 
+    #5.1 total de delitos IPC por estado y año, una columna por metrica
+    totales_ipc = df[
+        (df["scope"] == "ipc") &
+        (df["crime_head"].isin(["Total Cognizable IPC Crimes", "TOTAL IPC CRIMES"]))
+    ]
+    tabla = totales_ipc.pivot_table(
+        index=["state", "year"], columns="metric", values="value"
+    ).reset_index()
+
+    #solo los estado-año que tienen las dos variables
+    pares = tabla.dropna(subset=["cases_registered", "persons_arrested"]).copy()
+    logging.info(f"Pares estado-año para la relacion: {len(pares)}")
+
+    #5.2 correlacion entre casos registrados y personas detenidas
+    pearson = pares["cases_registered"].corr(pares["persons_arrested"])
+    #spearman = pearson calculado sobre los rangos de cada variable
+    spearman = pares["cases_registered"].rank().corr(pares["persons_arrested"].rank())
+
+    tabla_correlacion = pd.DataFrame([
+        {"variables": "cases_registered vs persons_arrested", "metodo": "pearson",
+         "coeficiente": round(pearson, 4), "pares": len(pares)},
+        {"variables": "cases_registered vs persons_arrested", "metodo": "spearman",
+         "coeficiente": round(spearman, 4), "pares": len(pares)}
+    ])
+    print("\n" + "=" * 70)
+    print(" CORRELACION ENTRE VARIABLES ")
+    print("=" * 70)
+    print(tabla_correlacion.to_string(index=False))
+
+    #5.3 personas detenidas por cada caso registrado (quita el efecto del tamaño del estado)
+    pares = pares[pares["cases_registered"] > 0].copy()
+    pares["detenidos_por_caso"] = pares["persons_arrested"] / pares["cases_registered"]
+
+    detenidos_estado = (
+        pares.groupby("state")["detenidos_por_caso"]
+        .agg(anios="count", mediana="median", minimo="min", maximo="max")
+        .reset_index()
+        .sort_values(by="mediana", ascending=False)
+    )
+
+    #5.4 proporcion de condenas por familia de delitos (scope)
+    totales = df[df["crime_category"] == "all_crimes"]
+    condenas = totales.pivot_table(
+        index=["state", "year", "scope", "crime_head"], columns="metric", values="value"
+    ).reset_index()
+    condenas = condenas.dropna(subset=["cases_convicted", "cases_chargesheeted"])
+    condenas = condenas[condenas["cases_chargesheeted"] > 0].copy()
+    condenas["proporcion_condena"] = condenas["cases_convicted"] / condenas["cases_chargesheeted"]
+
+    comparacion_scope = (
+        condenas.groupby("scope")["proporcion_condena"]
+        .agg(
+            cantidad="count",
+            mediana="median",
+            q1=lambda x: x.quantile(0.25),
+            q3=lambda x: x.quantile(0.75),
+            maximo="max"
+        )
+        .reset_index()
+        .sort_values(by="mediana", ascending=False)
+        .round(4)
+    )
+    print("\n" + "=" * 70)
+    print(" PROPORCION DE CONDENAS POR SCOPE ")
+    print("=" * 70)
+    print(comparacion_scope.to_string(index=False))
+
+    #5.5 exportacion
+    tabla_correlacion.to_csv(ruta_salida_tablas / "correlacion_casos_detenidos.csv", index=False, encoding="utf-8-sig")
+    pares.to_csv(ruta_salida_tablas / "pares_casos_detenidos.csv", index=False, encoding="utf-8-sig")
+    detenidos_estado.to_csv(ruta_salida_tablas / "detenidos_por_caso_estado.csv", index=False, encoding="utf-8-sig")
+    comparacion_scope.to_csv(ruta_salida_tablas / "comparacion_condenas_scope.csv", index=False, encoding="utf-8-sig")
+
+    logging.info("Tablas de relaciones entre variables exportadas.")
+    return tabla_correlacion
 
 # -----------------------------------------------------------------------------
 # BLOQUE PRINCIPAL
@@ -589,6 +673,13 @@ if __name__ == "__main__":
 
         #4. Estadistica descriptiva
         resumen_estadistico = estadistica_descriptiva(
+            df=df_limpio,
+            ruta_salida_tablas=DIR_TABLAS
+        )
+
+        
+        #5. Relaciones entre variables
+        relaciones_entre_variables(
             df=df_limpio,
             ruta_salida_tablas=DIR_TABLAS
         )
