@@ -683,6 +683,11 @@ if __name__ == "__main__":
             df=df_limpio,
             ruta_salida_tablas=DIR_TABLAS
         )
+        #6. Generar Visualizacion (Graficos)
+        generar_visualizaciones(
+            df=df_limpio,
+            ruta_salida_figuras=DIR_FIGURAS
+        )
 
     except Exception as error:
         logging.error(f"Ocurrió un error durante la ejecución: {error}")
