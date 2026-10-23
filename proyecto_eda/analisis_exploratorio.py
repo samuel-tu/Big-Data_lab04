@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 import numpy as np
 from pathlib import Path
-
+from visualizaciones import generar_visualizaciones
 # Configuración de registro de eventos (logging)
 logging.basicConfig(
     level=logging.INFO,
