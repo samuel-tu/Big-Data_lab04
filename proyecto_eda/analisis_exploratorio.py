@@ -14,7 +14,7 @@ logging.basicConfig(
 # -----------------------------------------------------------------------------
 # RUTAS RELATIVAS Y CONFIGURACIÓN DEL PROYECTO
 # -----------------------------------------------------------------------------
-RUTA_DATOS = os.path.join("datos", "crime_state_year.csv")
+RUTA_DATOS = os.path.join("datos", "crime_state_year.zip")
 DIR_TABLAS = os.path.join("resultados", "tablas")
 DIR_FIGURAS = os.path.join("resultados", "figuras")
 
@@ -31,17 +31,38 @@ def cargar_e_inspeccionar_datos(ruta_archivo, separador=',', codificacion='utf-8
     
     if not os.path.exists(ruta_archivo):
         raise FileNotFoundError(
-            f"No se encontró el archivo en: {ruta_archivo}. "
-            f"Asegúrate de haber copiado 'crime_state_year.csv' dentro de la carpeta 'datos/'."
+            f"No se encontró el dataset en: {ruta_archivo}. "
+            "Verifica que crime_state_year.zip esté dentro "
+            "de la carpeta datos."
         )
 
     try:
-        df = pd.read_csv(ruta_archivo, sep=separador, encoding=codificacion, low_memory=False)
+        df = pd.read_csv(
+            ruta_archivo,
+            sep=separador,
+            encoding=codificacion,
+            compression="zip",
+            low_memory=False
+        )
+
     except UnicodeDecodeError:
-        logging.warning("Error de codificación con UTF-8. Intentando con 'latin-1'...")
-        df = pd.read_csv(ruta_archivo, sep=separador, encoding='latin-1', low_memory=False)
+        logging.warning(
+            "Error de codificación UTF-8. Intentando con latin-1..."
+        )
+
+        df = pd.read_csv(
+            ruta_archivo,
+            sep=separador,
+            encoding="latin-1",
+            compression="zip",
+            low_memory=False
+        )
+
     except Exception as e:
-        raise RuntimeError(f"Error crítico al leer el archivo CSV: {e}")
+        raise RuntimeError(
+            f"Error al leer el dataset comprimido: {e}"
+        ) from e
+
 
     filas, columnas = df.shape
     logging.info(f"Dimensiones de entrada: {filas:,} filas x {columnas} columnas.")
