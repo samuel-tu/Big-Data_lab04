@@ -149,8 +149,8 @@ def figura3_dispersion_grupos(df, ruta, top=5):
 def figura4_top_estados(df, ruta, n=10):
     casos = _unicos(_total_ipc(df, "cases_registered"), ["state", "year"])
     resumen = (
-        casos.groupby("state")["value"]
-        .agg(total="sum", años="nunique")
+        casos.groupby("state")
+        .agg(total=("value","sum"), años=("year","nunique"))
         .nlargest(n, "total")
         .sort_values("total")
     )

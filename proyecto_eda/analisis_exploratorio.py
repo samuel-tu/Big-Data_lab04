@@ -657,7 +657,13 @@ if __name__ == "__main__":
         # 2. Diagnóstico de Calidad Inicial
         diagnostico_calidad(
             df=df_crimenes,
-            columnas_entidad=None,
+            columnas_entidad=[
+                "state",
+                "year",
+                "scope",
+                "crime_head",
+                "metric"
+            ],
             rangos_plausibles=None
         )
 
